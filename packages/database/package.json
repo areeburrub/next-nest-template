@@ -1,0 +1,46 @@
+{
+    "name": "@website-builder/database",
+    "version": "1.0.0",
+    "description": "Database package with Prisma ORM",
+    "main": "dist/src/index.js",
+    "types": "dist/src/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/src/index.d.ts",
+            "default": "./dist/src/index.js"
+        }
+    },
+    "scripts": {
+        "build": "bun run db:generate && tsc",
+        "dev": "prisma studio",
+        "start": "bun run db:migrate:deploy",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:migrate:deploy": "prisma migrate deploy",
+        "db:reset": "prisma migrate reset"
+    },
+    "keywords": [
+        "prisma",
+        "database",
+        "orm",
+        "postgresql"
+    ],
+    "license": "ISC",
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "dotenv": "^17.3.1",
+        "prisma": "^7.4.0",
+        "tsx": "^4.0.0",
+        "typescript": "^5.0.0"
+    },
+    "dependencies": {
+        "@prisma/adapter-pg": "^7.4.0",
+        "@prisma/client": "^7.4.0",
+        "pg": "^8.16.0"
+    },
+    "files": [
+        "dist",
+        "generated",
+        "prisma"
+    ]
+}

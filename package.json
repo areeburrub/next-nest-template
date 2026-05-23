@@ -1,0 +1,26 @@
+{
+    "name": "website-builder",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "build": "turbo run build",
+        "dev": "turbo run dev",
+        "lint": "turbo run lint",
+        "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+        "check-types": "turbo run check-types",
+        "build:backend": "turbo run build --filter=@website-builder/backend",
+        "start:backend": "turbo run start --filter=@website-builder/database --filter=@website-builder/backend"
+    },
+    "devDependencies": {
+        "prettier": "^3.7.4",
+        "turbo": "^2.9.14",
+        "typescript": "5.9.2"
+    },
+    "packageManager": "bun@1.3.8",
+    "engines": {
+        "node": ">=20.19"
+    }
+}
