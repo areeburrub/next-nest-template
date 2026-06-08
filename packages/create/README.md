@@ -9,13 +9,21 @@ npx create-next-nest-template
 bunx create-next-nest-template my-app
 ```
 
+## What it does
+
+1. Asks for **project name** (directory and `@scope` are derived automatically)
+2. Asks for **package manager**
+3. Scaffolds the project, creates env files, installs deps, and initializes git
+4. Starts PostgreSQL with Docker/Podman if available, then runs migrations
+
 ## Options
 
 | Flag | Description |
 |------|-------------|
 | `--from-local` | Use local repo as template (development) |
 | `--template <source>` | Giget source (default: `github:areeburrub/next-nest-template`) |
-| `--scope @myorg` | npm scope for workspace packages |
+| `--dir <path>` | Output directory (default: project name) |
+| `--scope @myorg` | Override package scope (default: `@project-name`) |
 | `--pm bun\|npm\|pnpm` | Package manager |
 | `--no-install` | Skip install |
 | `--no-git` | Skip git init |

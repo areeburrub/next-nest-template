@@ -8,15 +8,21 @@ import { downloadTemplate } from 'giget';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import {
+    buildDatabaseUrl,
     buildProjectNames,
     copyDirectory,
+    detectContainerRuntime,
+    getRunCommand,
     isValidProjectName,
     pathExists,
     finalizeScaffoldedProject,
     removeTemplateOnlyPaths,
+    runMigrations,
     setupEnvFiles,
+    startDatabase,
     toKebabCase,
     transformProject,
+    type PackageManager,
 } from './utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,7 +38,14 @@ interface CliOptions {
     install: boolean;
     git: boolean;
     scope?: string;
-    packageManager: 'bun' | 'npm' | 'pnpm';
+    packageManager: PackageManager;
+}
+
+interface ProjectAnswers {
+    projectName: string;
+    targetDir: string;
+    scope: string;
+    packageManager: PackageManager;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -58,8 +71,10 @@ function parseArgs(argv: string[]): CliOptions {
             options.template = argv[++i];
         } else if (arg === '--scope' && argv[i + 1]) {
             options.scope = argv[++i];
+        } else if (arg === '--dir' && argv[i + 1]) {
+            options.targetDir = argv[++i];
         } else if (arg === '--pm' && argv[i + 1]) {
-            const pm = argv[++i] as CliOptions['packageManager'];
+            const pm = argv[++i] as PackageManager;
             if (pm === 'bun' || pm === 'npm' || pm === 'pnpm') {
                 options.packageManager = pm;
             }
@@ -72,7 +87,6 @@ function parseArgs(argv: string[]): CliOptions {
     }
 
     if (positional[0]) options.projectName = positional[0];
-    if (positional[1]) options.targetDir = positional[1];
 
     return options;
 }
@@ -82,13 +96,14 @@ function printHelp(): void {
 ${pc.bold('create-next-nest-template')} — Scaffold a NestJS + Next.js + Clerk + Prisma monorepo
 
 ${pc.bold('Usage')}
-  npx create-next-nest-template [project-name] [directory]
-  bunx create-next-nest-template [project-name] [directory]
+  npx create-next-nest-template [project-name]
+  bunx create-next-nest-template [project-name]
 
 ${pc.bold('Options')}
   --from-local          Use the local monorepo as template (for development)
   --template <source>   Giget source (default: ${DEFAULT_TEMPLATE})
-  --scope <@scope>      npm scope for packages (default: @project-name)
+  --dir <path>          Output directory (default: project name)
+  --scope <@scope>      Override package scope (default: @project-name)
   --pm <bun|npm|pnpm>   Package manager (default: bun)
   --no-install          Skip dependency installation
   --no-git              Skip git init
@@ -96,39 +111,19 @@ ${pc.bold('Options')}
 
 ${pc.bold('Examples')}
   npx create-next-nest-template my-saas
-  bunx create-next-nest-template my-saas ./my-saas --scope @myorg
-  node packages/create/dist/index.js demo --from-local
+  bunx create-next-nest-template my-saas --pm pnpm
+  node packages/create/dist/index.js demo --from-local --dir ../demo
 `);
 }
 
-function hasAllCliArgs(options: CliOptions): boolean {
-    return Boolean(
-        options.projectName &&
-            (options.targetDir || options.projectName) &&
-            options.scope &&
-            (process.argv.includes('--pm') ||
-                process.argv.includes('--no-install') ||
-                process.argv.includes('--no-git')),
-    );
-}
-
-async function promptForMissing(options: CliOptions): Promise<{
-    projectName: string;
-    targetDir: string;
-    scope: string;
-    packageManager: CliOptions['packageManager'];
-    install: boolean;
-    git: boolean;
-}> {
-    if (hasAllCliArgs(options)) {
-        const kebab = toKebabCase(options.projectName!);
+async function promptForMissing(options: CliOptions): Promise<ProjectAnswers> {
+    if (options.projectName && process.argv.includes('--pm')) {
+        const kebab = toKebabCase(options.projectName);
         return {
             projectName: kebab,
             targetDir: options.targetDir ?? kebab,
-            scope: options.scope!,
+            scope: options.scope ?? `@${kebab}`,
             packageManager: options.packageManager,
-            install: options.install,
-            git: options.git,
         };
     }
 
@@ -156,33 +151,6 @@ async function promptForMissing(options: CliOptions): Promise<{
         process.exit(1);
     }
 
-    let targetDir = options.targetDir ?? kebab;
-    if (!options.targetDir && !options.projectName) {
-        const dirAnswer = await p.text({
-            message: 'Directory',
-            defaultValue: kebab,
-            validate: (value) => {
-                if (!value?.trim()) return 'Directory is required';
-            },
-        });
-        if (p.isCancel(dirAnswer)) process.exit(0);
-        targetDir = dirAnswer;
-    }
-
-    let scope = options.scope;
-    if (!scope) {
-        const scopeAnswer = await p.text({
-            message: 'Package scope',
-            defaultValue: `@${kebab}`,
-            validate: (value) => {
-                if (!value?.trim()) return 'Scope is required';
-                if (!value.startsWith('@')) return 'Scope must start with @';
-            },
-        });
-        if (p.isCancel(scopeAnswer)) process.exit(0);
-        scope = scopeAnswer;
-    }
-
     let packageManager = options.packageManager;
     if (!process.argv.includes('--pm')) {
         const pmAnswer = await p.select({
@@ -195,29 +163,15 @@ async function promptForMissing(options: CliOptions): Promise<{
             initialValue: 'bun',
         });
         if (p.isCancel(pmAnswer)) process.exit(0);
-        packageManager = pmAnswer as CliOptions['packageManager'];
+        packageManager = pmAnswer as PackageManager;
     }
 
-    let install = options.install;
-    let git = options.git;
-    if (!process.argv.includes('--no-install')) {
-        const installAnswer = await p.confirm({
-            message: 'Install dependencies?',
-            initialValue: true,
-        });
-        if (p.isCancel(installAnswer)) process.exit(0);
-        install = installAnswer;
-    }
-    if (!process.argv.includes('--no-git')) {
-        const gitAnswer = await p.confirm({
-            message: 'Initialize git repository?',
-            initialValue: true,
-        });
-        if (p.isCancel(gitAnswer)) process.exit(0);
-        git = gitAnswer;
-    }
-
-    return { projectName: kebab, targetDir, scope, packageManager, install, git };
+    return {
+        projectName: kebab,
+        targetDir: options.targetDir ?? kebab,
+        scope: options.scope ?? `@${kebab}`,
+        packageManager,
+    };
 }
 
 async function downloadOrCopyTemplate(
@@ -235,22 +189,22 @@ async function downloadOrCopyTemplate(
 
     if (options.fromLocal) {
         const templateRoot = path.resolve(__dirname, '../../..');
-        p.log.step(`Copying from local template: ${templateRoot}`);
+        p.log.step(`Copying template from ${templateRoot}`);
         await copyDirectory(templateRoot, absoluteTarget);
         return;
     }
 
-    p.log.step(`Downloading template: ${options.template}`);
+    p.log.step(`Downloading template from ${options.template}`);
     const { dir } = await downloadTemplate(options.template, {
         dir: absoluteTarget,
         force: true,
     });
-    p.log.success(`Template downloaded to ${dir}`);
+    p.log.success(`Template ready at ${dir}`);
 }
 
 async function runInstall(
     targetDir: string,
-    packageManager: CliOptions['packageManager'],
+    packageManager: PackageManager,
 ): Promise<void> {
     const absoluteTarget = path.resolve(targetDir);
     const installCmd =
@@ -266,7 +220,7 @@ async function runInstall(
         cwd: absoluteTarget,
         stdio: 'inherit',
     });
-    spinner.stop('Dependencies installed');
+    spinner.stop(`Dependencies installed with ${packageManager}`);
 }
 
 async function runGitInit(targetDir: string): Promise<void> {
@@ -280,24 +234,23 @@ async function runGitInit(targetDir: string): Promise<void> {
 function printNextSteps(
     targetDir: string,
     names: ReturnType<typeof buildProjectNames>,
-    packageManager: string,
+    packageManager: PackageManager,
+    databaseReady: boolean,
 ): void {
-    const run = packageManager === 'npm' ? 'npm run' : `${packageManager} run`;
+    const run = getRunCommand(packageManager);
+    const steps = [
+        `cd ${targetDir}`,
+        'Add your Clerk keys to .env, apps/backend/.env, and apps/website/.env.local',
+    ];
 
-    p.note(
-        [
-            `cd ${targetDir}`,
-            'cp .env.example .env',
-            'cp packages/database/.env.example packages/database/.env',
-            'cp apps/backend/.env.example apps/backend/.env',
-            'cp apps/website/.env.example apps/website/.env.local',
-            '# Add your Clerk keys to the env files',
-            'docker compose up -d',
-            `${run} db:migrate:deploy`,
-            `${run} dev`,
-        ].join('\n'),
-        'Next steps',
-    );
+    if (!databaseReady) {
+        steps.push(`Set DATABASE_URL in packages/database/.env`);
+        steps.push(`${run} db:migrate:deploy`);
+    }
+
+    steps.push(`${run} dev`);
+
+    p.note(steps.join('\n'), 'Next steps');
 
     p.outro(
         `${pc.green('Success!')} Created ${pc.cyan(names.title)} at ${pc.cyan(path.resolve(targetDir))}`,
@@ -312,26 +265,86 @@ async function main(): Promise<void> {
         const names = buildProjectNames(answers.projectName, answers.scope);
         const absoluteTarget = path.resolve(answers.targetDir);
 
-        const s = p.spinner();
-        s.start('Creating project...');
+        p.log.step(`Creating ${names.title} in ./${answers.targetDir}`);
+        p.log.info(`Package scope: ${names.scope}`);
 
         await downloadOrCopyTemplate(answers.targetDir, options);
+
+        p.log.step('Removing template-only files...');
         await removeTemplateOnlyPaths(absoluteTarget);
+
+        p.log.step('Renaming packages and configuration...');
         await transformProject(absoluteTarget, names);
         await finalizeScaffoldedProject(absoluteTarget, names);
-        await setupEnvFiles(absoluteTarget);
 
-        s.stop(`Project scaffolded at ${answers.targetDir}`);
+        p.log.step('Creating environment files...');
+        await setupEnvFiles(absoluteTarget, names);
+        p.log.success('Created .env, packages/database/.env, apps/backend/.env, apps/website/.env.local');
 
-        if (answers.install) {
+        if (options.install) {
             await runInstall(answers.targetDir, answers.packageManager);
+        } else {
+            p.log.info('Skipped dependency installation (--no-install)');
         }
 
-        if (answers.git) {
+        if (options.git) {
             await runGitInit(answers.targetDir);
+        } else {
+            p.log.info('Skipped git init (--no-git)');
         }
 
-        printNextSteps(answers.targetDir, names, answers.packageManager);
+        let databaseReady = false;
+        const runtime = await detectContainerRuntime();
+
+        const showDatabaseSetupHelp = (): void => {
+            p.log.info(`Set DATABASE_URL in packages/database/.env`);
+            p.log.info(`Default: ${buildDatabaseUrl(names)}`);
+            p.log.info(`Then run: ${getRunCommand(answers.packageManager)} db:migrate:deploy`);
+        };
+
+        if (runtime) {
+            const dockerSpinner = p.spinner();
+            dockerSpinner.start(`Starting PostgreSQL with ${runtime} compose...`);
+            try {
+                await startDatabase(absoluteTarget, runtime);
+                dockerSpinner.stop(`PostgreSQL is running (${runtime})`);
+
+                if (options.install) {
+                    const migrateSpinner = p.spinner();
+                    migrateSpinner.start('Running database migrations...');
+                    try {
+                        await runMigrations(absoluteTarget, answers.packageManager);
+                        migrateSpinner.stop('Database migrations applied');
+                        databaseReady = true;
+                    } catch (error) {
+                        migrateSpinner.stop('Database migrations failed');
+                        p.log.warn(
+                            error instanceof Error
+                                ? error.message
+                                : 'Could not apply database migrations',
+                        );
+                        showDatabaseSetupHelp();
+                    }
+                } else {
+                    p.log.info(
+                        `Skipped database migrations (--no-install). Run ${getRunCommand(answers.packageManager)} db:migrate:deploy after installing dependencies.`,
+                    );
+                }
+            } catch (error) {
+                dockerSpinner.stop(`${runtime} compose failed`);
+                p.log.warn(
+                    error instanceof Error
+                        ? error.message
+                        : 'Could not start database containers',
+                );
+                showDatabaseSetupHelp();
+            }
+        } else {
+            p.log.warn('No Docker or Podman detected.');
+            showDatabaseSetupHelp();
+        }
+
+        printNextSteps(answers.targetDir, names, answers.packageManager, databaseReady);
     } catch (error) {
         p.cancel(error instanceof Error ? error.message : 'Failed to create project');
         process.exit(1);

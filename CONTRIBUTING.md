@@ -66,7 +66,7 @@ The CLI lives in `packages/create`. Build and run it against the local template:
 ```bash
 cd packages/create
 bun run build
-node dist/index.js my-test-app ../my-test-app --from-local --scope @my-test --no-install
+node dist/index.js my-test-app --from-local --dir ../my-test-app --no-install --no-git
 ```
 
 Or from the repo root:

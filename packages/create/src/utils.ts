@@ -1,3 +1,4 @@
+import { execa } from 'execa';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -31,6 +32,9 @@ const TEXT_EXTENSIONS = new Set([
     '.txt',
     '.toml',
 ]);
+
+export type PackageManager = 'bun' | 'npm' | 'pnpm';
+export type ContainerRuntime = 'docker' | 'podman';
 
 export interface ProjectNames {
     kebab: string;
@@ -78,6 +82,10 @@ export function buildProjectNames(name: string, scope?: string): ProjectNames {
         title,
         scope: normalizedScope,
     };
+}
+
+export function buildDatabaseUrl(names: ProjectNames, port = 5434): string {
+    return `postgresql://postgres:postgres@localhost:${port}/${names.snake}?schema=public`;
 }
 
 export function getReplacements(names: ProjectNames): Array<[string, string]> {
@@ -160,7 +168,22 @@ async function walkAndTransform(dir: string, replacements: Array<[string, string
     }
 }
 
-export async function setupEnvFiles(targetDir: string): Promise<void> {
+async function setDatabaseUrlInEnvFile(filePath: string, databaseUrl: string): Promise<void> {
+    if (!(await pathExists(filePath))) return;
+
+    let content = await fs.readFile(filePath, 'utf8');
+    const databaseUrlLine = `DATABASE_URL="${databaseUrl}"`;
+
+    if (/^DATABASE_URL=.*$/m.test(content)) {
+        content = content.replace(/^DATABASE_URL=.*$/m, databaseUrlLine);
+    } else {
+        content = `${content.trimEnd()}\n${databaseUrlLine}\n`;
+    }
+
+    await fs.writeFile(filePath, content, 'utf8');
+}
+
+export async function setupEnvFiles(targetDir: string, names: ProjectNames): Promise<void> {
     const envCopies: Array<[string, string]> = [
         ['.env.example', '.env'],
         ['packages/database/.env.example', 'packages/database/.env'],
@@ -175,6 +198,11 @@ export async function setupEnvFiles(targetDir: string): Promise<void> {
             await fs.copyFile(source, destination);
         }
     }
+
+    const databaseUrl = buildDatabaseUrl(names);
+    await setDatabaseUrlInEnvFile(path.join(targetDir, '.env'), databaseUrl);
+    await setDatabaseUrlInEnvFile(path.join(targetDir, 'packages/database/.env'), databaseUrl);
+    await setDatabaseUrlInEnvFile(path.join(targetDir, 'apps/backend/.env'), databaseUrl);
 }
 
 export async function removeTemplateOnlyPaths(targetDir: string): Promise<void> {
@@ -245,16 +273,7 @@ ${names.kebab}/
 └── turbo.json
 \`\`\`
 
-## Setup
-
-\`\`\`bash
-cp .env.example .env
-cp packages/database/.env.example packages/database/.env
-cp apps/backend/.env.example apps/backend/.env
-cp apps/website/.env.example apps/website/.env.local
-\`\`\`
-
-Add your [Clerk](https://dashboard.clerk.com) keys to the env files.
+Environment files (.env, .env.local) are already created. Add your [Clerk](https://dashboard.clerk.com) keys before running the app.
 
 ## Database
 
@@ -266,7 +285,7 @@ bun run db:migrate:deploy
 Default local connection:
 
 \`\`\`
-postgresql://postgres:postgres@localhost:5434/${names.snake}
+${buildDatabaseUrl(names)}
 \`\`\`
 
 ## Development
@@ -309,4 +328,63 @@ export async function finalizeScaffoldedProject(
     if (await pathExists(lockPath)) {
         await fs.rm(lockPath);
     }
+}
+
+export async function detectContainerRuntime(): Promise<ContainerRuntime | null> {
+    for (const runtime of ['docker', 'podman'] as const) {
+        try {
+            await execa(runtime, ['compose', 'version'], { stdio: 'ignore' });
+            return runtime;
+        } catch {
+            continue;
+        }
+    }
+
+    return null;
+}
+
+export async function startDatabase(
+    targetDir: string,
+    runtime: ContainerRuntime,
+): Promise<void> {
+    try {
+        await execa(runtime, ['compose', 'up', '-d', '--wait'], {
+            cwd: targetDir,
+            stdio: 'inherit',
+        });
+        return;
+    } catch (error) {
+        const stderr =
+            error && typeof error === 'object' && 'stderr' in error
+                ? String((error as { stderr?: string }).stderr ?? '')
+                : '';
+        const message = error instanceof Error ? error.message : String(error);
+        const combined = `${message}\n${stderr}`;
+
+        if (!/unknown flag|unknown shorthand flag/i.test(combined)) {
+            throw error;
+        }
+    }
+
+    await execa(runtime, ['compose', 'up', '-d'], {
+        cwd: targetDir,
+        stdio: 'inherit',
+    });
+}
+
+export function getRunCommand(packageManager: PackageManager): string {
+    return packageManager === 'npm' ? 'npm run' : `${packageManager} run`;
+}
+
+export async function runMigrations(
+    targetDir: string,
+    packageManager: PackageManager,
+): Promise<void> {
+    const runCmd = getRunCommand(packageManager);
+    const [cmd, ...args] = runCmd.split(' ');
+
+    await execa(cmd, [...args, 'db:migrate:deploy'], {
+        cwd: targetDir,
+        stdio: 'inherit',
+    });
 }

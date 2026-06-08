@@ -69,18 +69,14 @@ npx create-next-nest-template my-app
 cd my-app
 ```
 
-Or with Bun:
+The CLI asks for a **project name** and **package manager**. It then:
 
-```bash
-bunx create-next-nest-template my-app --scope @myorg
-```
-
-The CLI will:
-
-- Download this template and rename `@next-nest-template/*` to your scope
-- Remove template-only files (`packages/create`, CI publish workflow)
-- Copy `.env.example` files to their runtime locations
-- Optionally install dependencies and initialize git
+- Creates a `./my-app` directory with scope `@my-app`
+- Renames `@next-nest-template/*` packages to your project scope
+- Removes template-only files (`packages/create`, CI publish workflow)
+- Creates `.env` and `.env.local` files with the correct `DATABASE_URL`
+- Installs dependencies and initializes git
+- Starts PostgreSQL via Docker/Podman (if available) and runs migrations
 
 ### Option B — Clone directly
 
