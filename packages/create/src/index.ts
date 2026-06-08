@@ -121,33 +121,47 @@ ${pc.bold('Examples')}
 `);
 }
 
+function shouldSkipPrompts(options: CliOptions): boolean {
+    return Boolean(options.projectName && process.argv.includes('--pm'));
+}
+
+function logProjectPlan(
+    targetDir: string,
+    packageManager: PackageManager,
+    scope: string,
+): void {
+    console.log('');
+    p.log.step(`Creating project in ${pc.cyan(path.resolve(targetDir))}`);
+    p.log.step(`Package scope ${pc.cyan(scope)}`);
+    p.log.step(`Using ${pc.cyan(packageManager)}.`);
+    console.log('');
+}
+
 async function promptForMissing(options: CliOptions): Promise<ProjectAnswers> {
-    if (options.projectName && process.argv.includes('--pm')) {
-        const kebab = toKebabCase(options.projectName);
-        return {
-            projectName: kebab,
-            targetDir: options.targetDir ?? kebab,
-            scope: options.scope ?? `@${kebab}`,
-            packageManager: options.packageManager,
-        };
+    let projectName = options.projectName;
+
+    if (!shouldSkipPrompts(options)) {
+        p.intro(pc.bgCyan(pc.black(' create-next-nest-template ')));
+
+        if (!projectName) {
+            const answer = await p.text({
+                message: 'What is your project named?',
+                placeholder: 'my-saas-app',
+                validate: (value) => {
+                    if (!value?.trim()) return 'Project name is required';
+                    if (!isValidProjectName(value)) {
+                        return 'Use letters, numbers, and hyphens only';
+                    }
+                },
+            });
+            if (p.isCancel(answer)) process.exit(0);
+            projectName = answer;
+        }
     }
 
-    p.intro(pc.bgCyan(pc.black(' create-next-nest-template ')));
-
-    let projectName = options.projectName;
     if (!projectName) {
-        const answer = await p.text({
-            message: 'Project name',
-            placeholder: 'my-saas-app',
-            validate: (value) => {
-                if (!value?.trim()) return 'Project name is required';
-                if (!isValidProjectName(value)) {
-                    return 'Use letters, numbers, and hyphens only';
-                }
-            },
-        });
-        if (p.isCancel(answer)) process.exit(0);
-        projectName = answer;
+        p.cancel('Project name is required');
+        process.exit(1);
     }
 
     const kebab = toKebabCase(projectName);
@@ -156,25 +170,72 @@ async function promptForMissing(options: CliOptions): Promise<ProjectAnswers> {
         process.exit(1);
     }
 
+    const defaultScope = `@${kebab}`;
     let packageManager = options.packageManager;
-    if (!process.argv.includes('--pm')) {
-        const pmAnswer = await p.select({
-            message: 'Package manager',
-            options: [
-                { value: 'bun', label: 'bun (recommended)' },
-                { value: 'npm', label: 'npm' },
-                { value: 'pnpm', label: 'pnpm' },
-            ],
-            initialValue: 'bun',
+    let scope = options.scope ?? defaultScope;
+    let targetDir = options.targetDir ?? kebab;
+
+    if (!shouldSkipPrompts(options)) {
+        const useDefaults = await p.confirm({
+            message: 'Would you like to use the recommended defaults?',
+            initialValue: true,
         });
-        if (p.isCancel(pmAnswer)) process.exit(0);
-        packageManager = pmAnswer as PackageManager;
+        if (p.isCancel(useDefaults)) process.exit(0);
+
+        if (!useDefaults) {
+            if (!process.argv.includes('--pm')) {
+                const pmAnswer = await p.select({
+                    message: 'Package manager',
+                    options: [
+                        { value: 'bun', label: 'bun (recommended)' },
+                        { value: 'npm', label: 'npm' },
+                        { value: 'pnpm', label: 'pnpm' },
+                    ],
+                    initialValue: 'bun',
+                });
+                if (p.isCancel(pmAnswer)) process.exit(0);
+                packageManager = pmAnswer as PackageManager;
+            }
+
+            if (!options.scope) {
+                const scopeAnswer = await p.text({
+                    message: 'Package scope',
+                    defaultValue: defaultScope,
+                    validate: (value) => {
+                        if (!value?.trim()) return 'Package scope is required';
+                        if (!value.startsWith('@')) return 'Package scope must start with @';
+                    },
+                });
+                if (p.isCancel(scopeAnswer)) process.exit(0);
+                scope = scopeAnswer;
+            }
+
+            if (!options.targetDir) {
+                const dirAnswer = await p.text({
+                    message: 'Directory',
+                    defaultValue: kebab,
+                    validate: (value) => {
+                        if (!value?.trim()) return 'Directory is required';
+                    },
+                });
+                if (p.isCancel(dirAnswer)) process.exit(0);
+                targetDir = dirAnswer;
+            }
+        } else {
+            packageManager = process.argv.includes('--pm')
+                ? options.packageManager
+                : 'bun';
+            scope = options.scope ?? defaultScope;
+            targetDir = options.targetDir ?? kebab;
+        }
     }
+
+    logProjectPlan(targetDir, packageManager, scope);
 
     return {
         projectName: kebab,
-        targetDir: options.targetDir ?? kebab,
-        scope: options.scope ?? `@${kebab}`,
+        targetDir,
+        scope,
         packageManager,
     };
 }
@@ -273,7 +334,9 @@ function printSummary(
 
     p.note(nextSteps.join('\n'), 'Next steps');
 
-    p.outro(`${pc.green('You are all set!')} Happy building.`);
+    p.outro(
+        `${pc.green('Success!')} Created ${pc.cyan(summary.title)} at ${pc.cyan(path.resolve(summary.projectPath))}`,
+    );
 }
 
 async function main(): Promise<void> {

@@ -11,10 +11,11 @@ bunx create-next-nest-template my-app
 
 ## What it does
 
-1. Asks for **project name** (directory and `@scope` are derived automatically)
-2. Asks for **package manager**
-3. Scaffolds the project, creates env files, installs deps, and initializes git
-4. Shows next steps for Docker and database migrations
+1. Asks for **project name**
+2. Offers **recommended defaults** (`bun`, `@project-name`, `./project-name`)
+3. Optional customize: package manager, scope, directory (each with smart defaults)
+4. Scaffolds the project, creates env files, installs deps, and initializes git
+5. Shows next steps for Docker and database migrations
 
 ## Options
 
