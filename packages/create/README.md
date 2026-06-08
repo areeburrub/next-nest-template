@@ -13,7 +13,7 @@ bunx create-next-nest-template my-app
 
 1. Asks for **project name**
 2. Offers **recommended defaults** (`bun`, `@project-name`, `./project-name`)
-3. Optional customize: package manager, scope, directory (each with smart defaults)
+3. Optional customize: package manager, import alias, directory (each with smart defaults)
 4. Scaffolds the project, creates env files, installs deps, and initializes git
 5. Shows next steps for Docker and database migrations
 
@@ -24,7 +24,7 @@ bunx create-next-nest-template my-app
 | `--from-local` | Use local repo as template (development) |
 | `--template <source>` | Giget source (default: `github:areeburrub/next-nest-template`) |
 | `--dir <path>` | Output directory (default: project name) |
-| `--scope @myorg` | Override package scope (default: `@project-name`) |
+| `--scope @myorg` | Override import alias (default: `@project-name`) |
 | `--pm bun\|npm\|pnpm` | Package manager |
 | `--no-install` | Skip install |
 | `--no-git` | Skip git init |

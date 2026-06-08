@@ -108,7 +108,7 @@ ${pc.bold('Options')}
   --from-local          Use the local monorepo as template (for development)
   --template <source>   Giget source (default: ${DEFAULT_TEMPLATE})
   --dir <path>          Output directory (default: project name)
-  --scope <@scope>      Override package scope (default: @project-name)
+  --scope <@alias>      Override import alias (default: @project-name)
   --pm <bun|npm|pnpm>   Package manager (default: bun)
   --no-install          Skip dependency installation
   --no-git              Skip git init
@@ -128,12 +128,11 @@ function shouldSkipPrompts(options: CliOptions): boolean {
 function logProjectPlan(
     targetDir: string,
     packageManager: PackageManager,
-    scope: string,
 ): void {
     console.log('');
-    p.log.step(`Creating project in ${pc.cyan(path.resolve(targetDir))}`);
-    p.log.step(`Package scope ${pc.cyan(scope)}`);
-    p.log.step(`Using ${pc.cyan(packageManager)}.`);
+    console.log(`Creating a new monorepo in ${path.resolve(targetDir)}.`);
+    console.log('');
+    console.log(`Using ${packageManager}.`);
     console.log('');
 }
 
@@ -141,7 +140,13 @@ async function promptForMissing(options: CliOptions): Promise<ProjectAnswers> {
     let projectName = options.projectName;
 
     if (!shouldSkipPrompts(options)) {
-        p.intro(pc.bgCyan(pc.black(' create-next-nest-template ')));
+        p.note(
+            [
+                'A full-stack Turborepo with NestJS, Next.js, Clerk, Prisma, and shadcn/ui.',
+                'Your project name is used for the folder and import alias (my-app → @my-app).',
+            ].join('\n'),
+            'create-next-nest-template',
+        );
 
         if (!projectName) {
             const answer = await p.text({
@@ -176,18 +181,30 @@ async function promptForMissing(options: CliOptions): Promise<ProjectAnswers> {
     let targetDir = options.targetDir ?? kebab;
 
     if (!shouldSkipPrompts(options)) {
-        const useDefaults = await p.confirm({
+        const defaultsAnswer = await p.select({
             message: 'Would you like to use the recommended defaults?',
-            initialValue: true,
+            options: [
+                {
+                    value: 'yes',
+                    label: 'Yes, use recommended defaults',
+                    hint: `bun · ${defaultScope} · ./${kebab}`,
+                },
+                {
+                    value: 'no',
+                    label: 'No, customize settings',
+                    hint: 'package manager, import alias, directory',
+                },
+            ],
+            initialValue: 'yes',
         });
-        if (p.isCancel(useDefaults)) process.exit(0);
+        if (p.isCancel(defaultsAnswer)) process.exit(0);
 
-        if (!useDefaults) {
+        if (defaultsAnswer === 'no') {
             if (!process.argv.includes('--pm')) {
                 const pmAnswer = await p.select({
-                    message: 'Package manager',
+                    message: 'Which package manager would you like to use?',
                     options: [
-                        { value: 'bun', label: 'bun (recommended)' },
+                        { value: 'bun', label: 'bun', hint: 'recommended' },
                         { value: 'npm', label: 'npm' },
                         { value: 'pnpm', label: 'pnpm' },
                     ],
@@ -198,21 +215,31 @@ async function promptForMissing(options: CliOptions): Promise<ProjectAnswers> {
             }
 
             if (!options.scope) {
-                const scopeAnswer = await p.text({
-                    message: 'Package scope',
-                    defaultValue: defaultScope,
-                    validate: (value) => {
-                        if (!value?.trim()) return 'Package scope is required';
-                        if (!value.startsWith('@')) return 'Package scope must start with @';
-                    },
+                const customizeAlias = await p.confirm({
+                    message: `Would you like to customize the import alias (\`${defaultScope}\` by default)?`,
+                    initialValue: false,
                 });
-                if (p.isCancel(scopeAnswer)) process.exit(0);
-                scope = scopeAnswer;
+                if (p.isCancel(customizeAlias)) process.exit(0);
+
+                if (customizeAlias) {
+                    const aliasAnswer = await p.text({
+                        message: 'What import alias would you like configured?',
+                        placeholder: 'Used in imports like @my-app/backend',
+                        defaultValue: defaultScope,
+                        validate: (value) => {
+                            if (!value?.trim()) return 'Import alias is required';
+                            if (!value.startsWith('@')) return 'Import alias must start with @';
+                        },
+                    });
+                    if (p.isCancel(aliasAnswer)) process.exit(0);
+                    scope = aliasAnswer;
+                }
             }
 
             if (!options.targetDir) {
                 const dirAnswer = await p.text({
-                    message: 'Directory',
+                    message: 'Where should the project be created?',
+                    placeholder: 'Relative to your current directory',
                     defaultValue: kebab,
                     validate: (value) => {
                         if (!value?.trim()) return 'Directory is required';
@@ -230,7 +257,7 @@ async function promptForMissing(options: CliOptions): Promise<ProjectAnswers> {
         }
     }
 
-    logProjectPlan(targetDir, packageManager, scope);
+    logProjectPlan(targetDir, packageManager);
 
     return {
         projectName: kebab,
@@ -297,7 +324,6 @@ function printSummary(
     const run = getRunCommand(packageManager);
 
     const completed = [
-        `${check} ${pc.bold(summary.title)} created at ${pc.cyan(summary.projectPath)}`,
         `${check} ${pc.cyan(`${summary.scope}/backend`)} ${pc.dim('(NestJS)')}`,
         `${check} ${pc.cyan(`${summary.scope}/website`)} ${pc.dim('(Next.js)')}`,
         `${check} ${pc.cyan(`${summary.scope}/database`)} ${pc.dim('(Prisma)')}`,
@@ -347,8 +373,8 @@ async function main(): Promise<void> {
         const names = buildProjectNames(answers.projectName, answers.scope);
         const absoluteTarget = path.resolve(answers.targetDir);
 
-        const spinner = p.spinner();
-        spinner.start('Creating your project...');
+        console.log('Initializing project with template: next-nest-template');
+        console.log('');
 
         await downloadOrCopyTemplate(answers.targetDir, options);
         await removeTemplateOnlyPaths(absoluteTarget);
@@ -366,18 +392,20 @@ async function main(): Promise<void> {
         };
 
         if (options.install) {
-            spinner.message('Installing dependencies...');
+            console.log('Installing dependencies:');
+            console.log('');
             await runInstall(answers.targetDir, answers.packageManager);
             summary.installed = true;
         }
 
         if (options.git) {
-            spinner.message('Initializing git...');
             await runGitInit(answers.targetDir);
             summary.gitInit = true;
         }
 
-        spinner.stop('Project ready');
+        console.log('');
+        console.log(`${pc.green('✓')} Project files generated successfully`);
+        console.log('');
 
         printSummary(summary, answers.packageManager);
     } catch (error) {
