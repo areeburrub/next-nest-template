@@ -245,7 +245,9 @@ function printSummary(
     ];
 
     if (summary.envFiles) {
-        completed.push(`${check} Environment files configured`);
+        completed.push(`${check} ${pc.cyan('packages/database/.env')} ${pc.dim('(Prisma)')}`);
+        completed.push(`${check} ${pc.cyan('apps/backend/.env')} ${pc.dim('(NestJS)')}`);
+        completed.push(`${check} ${pc.cyan('apps/website/.env.local')} ${pc.dim('(Next.js)')}`);
     }
 
     if (summary.installed) {
@@ -265,7 +267,7 @@ function printSummary(
         `cd ${summary.projectPath}`,
         'docker compose up -d',
         `${run} db:migrate:deploy`,
-        'Add your Clerk keys to .env, apps/backend/.env, and apps/website/.env.local',
+        'Add your Clerk keys to apps/backend/.env and apps/website/.env.local',
         `${run} dev`,
     ];
 

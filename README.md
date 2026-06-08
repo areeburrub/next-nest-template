@@ -74,7 +74,7 @@ The CLI asks for a **project name** and **package manager**. It then:
 - Creates a `./my-app` directory with scope `@my-app`
 - Renames `@next-nest-template/*` packages to your project scope
 - Removes template-only files (`packages/create`, CI publish workflow)
-- Creates `.env` and `.env.local` files with the correct `DATABASE_URL`
+- Creates per-app env files (`packages/database/.env`, `apps/backend/.env`, `apps/website/.env.local`)
 - Installs dependencies and initializes git
 - Shows next steps to start PostgreSQL (`docker compose up -d`) and run migrations
 
@@ -93,13 +93,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and pull request 
 ### Environment setup
 
 ```bash
-cp .env.example .env
 cp packages/database/.env.example packages/database/.env
 cp apps/backend/.env.example apps/backend/.env
 cp apps/website/.env.example apps/website/.env.local
 ```
 
-Add your [Clerk](https://dashboard.clerk.com) keys to the env files.
+Add your [Clerk](https://dashboard.clerk.com) keys to `apps/backend/.env` and `apps/website/.env.local`.
 
 | Variable | Description |
 |----------|-------------|

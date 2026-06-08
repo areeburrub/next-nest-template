@@ -29,13 +29,12 @@ bun install
 ### Environment files
 
 ```bash
-cp .env.example .env
 cp packages/database/.env.example packages/database/.env
 cp apps/backend/.env.example apps/backend/.env
 cp apps/website/.env.example apps/website/.env.local
 ```
 
-Add your Clerk keys to the env files before running the apps.
+Add your Clerk keys to `apps/backend/.env` and `apps/website/.env.local` before running the apps.
 
 ### Database
 

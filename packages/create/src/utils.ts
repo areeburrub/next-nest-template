@@ -183,7 +183,6 @@ async function setDatabaseUrlInEnvFile(filePath: string, databaseUrl: string): P
 
 export async function setupEnvFiles(targetDir: string, names: ProjectNames): Promise<void> {
     const envCopies: Array<[string, string]> = [
-        ['.env.example', '.env'],
         ['packages/database/.env.example', 'packages/database/.env'],
         ['apps/backend/.env.example', 'apps/backend/.env'],
         ['apps/website/.env.example', 'apps/website/.env.local'],
@@ -192,13 +191,13 @@ export async function setupEnvFiles(targetDir: string, names: ProjectNames): Pro
     for (const [from, to] of envCopies) {
         const source = path.join(targetDir, from);
         const destination = path.join(targetDir, to);
-        if (await pathExists(source)) {
-            await fs.copyFile(source, destination);
+        if (!(await pathExists(source))) {
+            throw new Error(`Missing environment template: ${from}`);
         }
+        await fs.copyFile(source, destination);
     }
 
     const databaseUrl = buildDatabaseUrl(names);
-    await setDatabaseUrlInEnvFile(path.join(targetDir, '.env'), databaseUrl);
     await setDatabaseUrlInEnvFile(path.join(targetDir, 'packages/database/.env'), databaseUrl);
     await setDatabaseUrlInEnvFile(path.join(targetDir, 'apps/backend/.env'), databaseUrl);
 }
@@ -271,7 +270,7 @@ ${names.kebab}/
 └── turbo.json
 \`\`\`
 
-Environment files (.env, .env.local) are already created. Add your [Clerk](https://dashboard.clerk.com) keys before running the app.
+Environment files are already created in each app package. Add your [Clerk](https://dashboard.clerk.com) keys before running the app.
 
 ## Database
 
