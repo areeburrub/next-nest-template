@@ -4,7 +4,7 @@ A production-ready monorepo boilerplate for full-stack TypeScript applications.
 
 **Next.js** · **NestJS** · **Clerk** · **Prisma 7** · **Turborepo** · **Bun**
 
-Clone it, scaffold a new project with the CLI, or fork and customize. Auth, database sync, API validation, and frontend patterns are already wired up.
+Scaffold a new project with the CLI, clone this repo to contribute, or fork and customize. Auth, database sync, API validation, and frontend patterns are already wired up.
 
 ## What's included
 
@@ -16,6 +16,7 @@ Clone it, scaffold a new project with the CLI, or fork and customize. Auth, data
 - **Shared types package** with `class-validator` DTOs used by API controllers and server actions
 - **Dark mode** with theme toggle
 - **Server actions** pattern for authenticated API calls from Next.js
+- **Scaffold CLI** (`create-next-nest-template`) published to npm
 
 ## Tech stack
 
@@ -29,6 +30,8 @@ Clone it, scaffold a new project with the CLI, or fork and customize. Auth, data
 | Types | Shared DTOs with `class-validator` |
 
 ## Project structure
+
+This repository is the **template source**. It includes the scaffold CLI under `packages/create`.
 
 ```
 next-nest-template/
@@ -48,12 +51,14 @@ next-nest-template/
 │           ├── _actions/        # Server actions → backend API
 │           └── components/      # UI + shadcn components
 ├── packages/
-│   ├── create/                  # create-next-nest-template CLI
+│   ├── create/                  # create-next-nest-template CLI (template only)
 │   ├── database/                # Prisma schema, migrations, client
 │   └── types/                   # Shared DTOs and response types
 ├── docker-compose.yml           # Local PostgreSQL
 └── turbo.json
 ```
+
+When someone scaffolds a new project, the CLI removes template-only files (`packages/create`, publish workflow) and renames packages to their project scope. The generated app only contains `apps/` and `packages/database` + `packages/types`.
 
 ## Quick start
 
@@ -70,15 +75,24 @@ Or with Bun:
 bunx create-next-nest-template my-app --scope @myorg
 ```
 
-The CLI downloads this template, renames packages to your project, copies env files, and optionally installs dependencies.
+The CLI will:
+
+- Download this template and rename `@next-nest-template/*` to your scope
+- Remove template-only files (`packages/create`, CI publish workflow)
+- Copy `.env.example` files to their runtime locations
+- Optionally install dependencies and initialize git
 
 ### Option B — Clone directly
 
+Use this when contributing to the template or working from a fork:
+
 ```bash
-git clone https://github.com/areeburrub/next-nest-template.git my-app
-cd my-app
+git clone https://github.com/areeburrub/next-nest-template.git
+cd next-nest-template
 bun install
 ```
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and pull request guidelines.
 
 ### Environment setup
 
@@ -152,6 +166,7 @@ After sign-in/sign-up, users are redirected to `/dashboard`.
 | `bun run db:migrate` | Create and apply a migration (dev) |
 | `bun run db:migrate:deploy` | Apply migrations (CI/production) |
 | `bun run db:studio` | Open Prisma Studio |
+| `bun run create` | Run the scaffold CLI locally (`--from-local`) |
 
 Run a single app:
 
@@ -164,9 +179,9 @@ cd apps/website && bun run dev
 
 ### Rename for your product
 
-Search and replace `@next-nest-template` with your scope (e.g. `@my-app`) across `package.json` files, imports, and `next.config.ts`.
+Use the CLI — it renames packages, database names, and Docker resources automatically.
 
-Or use the CLI — it handles renaming automatically.
+If you cloned manually, search and replace `@next-nest-template` with your scope (e.g. `@my-app`) across `package.json` files, imports, and `next.config.ts`.
 
 ### Add a database model
 
@@ -202,6 +217,15 @@ bunx shadcn@latest add <component>
 ```
 
 DTOs live in `packages/types` with `class-validator` decorators.
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) for:
+
+- Local development setup
+- Testing scaffold changes with `--from-local`
+- Pull request expectations
+- CLI release process
 
 ## Requirements
 

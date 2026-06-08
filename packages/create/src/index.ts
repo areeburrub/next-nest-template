@@ -12,7 +12,8 @@ import {
     copyDirectory,
     isValidProjectName,
     pathExists,
-    removeCreatePackage,
+    finalizeScaffoldedProject,
+    removeTemplateOnlyPaths,
     setupEnvFiles,
     toKebabCase,
     transformProject,
@@ -315,8 +316,9 @@ async function main(): Promise<void> {
         s.start('Creating project...');
 
         await downloadOrCopyTemplate(answers.targetDir, options);
-        await removeCreatePackage(absoluteTarget);
+        await removeTemplateOnlyPaths(absoluteTarget);
         await transformProject(absoluteTarget, names);
+        await finalizeScaffoldedProject(absoluteTarget, names);
         await setupEnvFiles(absoluteTarget);
 
         s.stop(`Project scaffolded at ${answers.targetDir}`);

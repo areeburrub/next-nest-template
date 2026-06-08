@@ -85,11 +85,17 @@ export function getReplacements(names: ProjectNames): Array<[string, string]> {
         ['@next-nest-template', names.scope],
         ['next-nest-template-postgres', `${names.kebab}-postgres`],
         ['next_nest_template_postgres_data', `${names.snake}_postgres_data`],
+        ['create-next-nest-template', names.kebab],
         ['next-nest-template', names.kebab],
         ['next_nest_template', names.snake],
         ['Next Nest Template', names.title],
     ];
 }
+
+const TEMPLATE_ONLY_PATHS = [
+    'packages/create',
+    '.github/workflows/publish-cli.yml',
+];
 
 export async function pathExists(target: string): Promise<boolean> {
     try {
@@ -123,6 +129,7 @@ function shouldTransformFile(filePath: string): boolean {
     const ext = path.extname(filePath);
     if (TEXT_EXTENSIONS.has(ext)) return true;
     if (filePath.endsWith('.env.example')) return true;
+    if (path.basename(filePath) === 'LICENSE') return true;
     return false;
 }
 
@@ -170,9 +177,136 @@ export async function setupEnvFiles(targetDir: string): Promise<void> {
     }
 }
 
-export async function removeCreatePackage(targetDir: string): Promise<void> {
-    const createPath = path.join(targetDir, 'packages', 'create');
-    if (await pathExists(createPath)) {
-        await fs.rm(createPath, { recursive: true, force: true });
+export async function removeTemplateOnlyPaths(targetDir: string): Promise<void> {
+    for (const relPath of TEMPLATE_ONLY_PATHS) {
+        const fullPath = path.join(targetDir, relPath);
+        if (await pathExists(fullPath)) {
+            await fs.rm(fullPath, { recursive: true, force: true });
+        }
+    }
+
+    const workflowsDir = path.join(targetDir, '.github', 'workflows');
+    if (await pathExists(workflowsDir)) {
+        const entries = await fs.readdir(workflowsDir);
+        if (entries.length === 0) {
+            await fs.rm(workflowsDir, { recursive: true, force: true });
+        }
+    }
+
+    const githubDir = path.join(targetDir, '.github');
+    if (await pathExists(githubDir)) {
+        const entries = await fs.readdir(githubDir);
+        if (entries.length === 0) {
+            await fs.rm(githubDir, { recursive: true, force: true });
+        }
+    }
+}
+
+export async function sanitizeRootPackageJson(
+    targetDir: string,
+    names: ProjectNames,
+): Promise<void> {
+    const pkgPath = path.join(targetDir, 'package.json');
+    const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8')) as Record<string, unknown>;
+
+    pkg.name = names.kebab;
+    pkg.description = `${names.title} — Next.js + NestJS + Clerk + Prisma monorepo`;
+
+    if (pkg.scripts && typeof pkg.scripts === 'object') {
+        delete (pkg.scripts as Record<string, string>).create;
+    }
+
+    delete pkg.repository;
+    delete pkg.bugs;
+    delete pkg.homepage;
+
+    await fs.writeFile(pkgPath, `${JSON.stringify(pkg, null, 4)}\n`);
+}
+
+export async function writeProjectReadme(
+    targetDir: string,
+    names: ProjectNames,
+): Promise<void> {
+    const readme = `# ${names.title}
+
+A full-stack TypeScript monorepo powered by Next.js, NestJS, Clerk, Prisma, and Turborepo.
+
+## Project structure
+
+\`\`\`
+${names.kebab}/
+├── apps/
+│   ├── backend/                 # NestJS API (port 3001)
+│   └── website/                 # Next.js frontend (port 3000)
+├── packages/
+│   ├── database/                # Prisma schema, migrations, client
+│   └── types/                   # Shared DTOs and response types
+├── docker-compose.yml           # Local PostgreSQL
+└── turbo.json
+\`\`\`
+
+## Setup
+
+\`\`\`bash
+cp .env.example .env
+cp packages/database/.env.example packages/database/.env
+cp apps/backend/.env.example apps/backend/.env
+cp apps/website/.env.example apps/website/.env.local
+\`\`\`
+
+Add your [Clerk](https://dashboard.clerk.com) keys to the env files.
+
+## Database
+
+\`\`\`bash
+docker compose up -d
+bun run db:migrate:deploy
+\`\`\`
+
+Default local connection:
+
+\`\`\`
+postgresql://postgres:postgres@localhost:5434/${names.snake}
+\`\`\`
+
+## Development
+
+\`\`\`bash
+bun run dev
+\`\`\`
+
+| Service | URL |
+|---------|-----|
+| Website | http://localhost:3000 |
+| Backend | http://localhost:3001 |
+| Prisma Studio | \`bun run db:studio\` |
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| \`${names.scope}/backend\` | NestJS API |
+| \`${names.scope}/website\` | Next.js app |
+| \`${names.scope}/database\` | Prisma client and migrations |
+| \`${names.scope}/types\` | Shared DTOs |
+
+## License
+
+MIT
+`;
+
+    await fs.writeFile(path.join(targetDir, 'README.md'), readme, 'utf8');
+}
+
+export async function finalizeScaffoldedProject(
+    targetDir: string,
+    names: ProjectNames,
+): Promise<void> {
+    await sanitizeRootPackageJson(targetDir, names);
+    await writeProjectReadme(targetDir, names);
+
+    const lockPath = path.join(targetDir, 'bun.lock');
+    if (await pathExists(lockPath)) {
+        await fs.rm(lockPath);
     }
 }

@@ -24,14 +24,8 @@ bunx create-next-nest-template my-app
 
 Publishes automatically on push to `main` when this package changes (see `.github/workflows/publish-cli.yml`).
 
-Requires `NPM_TOKEN` GitHub secret. Bump `version` in `package.json` before each release.
+Uses npm Trusted Publishing (OIDC) — no long-lived tokens. Patch versions auto-bump in CI; bump `version` manually for minor/major releases.
 
-Manual publish:
-
-```bash
-npm login
-bun run build
-npm publish
-```
+See [PUBLISHING.md](./PUBLISHING.md) for setup and release details.
 
 Template repo: [next-nest-template](https://github.com/areeburrub/next-nest-template)
