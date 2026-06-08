@@ -1,5 +1,5 @@
 {
-    "name": "website-builder",
+    "name": "nest-next-template",
     "private": true,
     "workspaces": [
         "apps/*",
@@ -11,8 +11,12 @@
         "lint": "turbo run lint",
         "format": "prettier --write \"**/*.{ts,tsx,md}\"",
         "check-types": "turbo run check-types",
-        "build:backend": "turbo run build --filter=@website-builder/backend",
-        "start:backend": "turbo run start --filter=@website-builder/database --filter=@website-builder/backend"
+        "build:backend": "turbo run build --filter=@nest-next-template/backend",
+        "start:backend": "turbo run start --filter=@nest-next-template/database --filter=@nest-next-template/backend",
+        "db:migrate": "cd packages/database && bun run db:migrate",
+        "db:migrate:deploy": "cd packages/database && bun run db:migrate:deploy",
+        "db:studio": "cd packages/database && bun run dev",
+        "create": "cd packages/create && bun run build && node dist/index.js"
     },
     "devDependencies": {
         "prettier": "^3.7.4",

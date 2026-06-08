@@ -1,5 +1,5 @@
 {
-    "name": "@website-builder/types",
+    "name": "@nest-next-template/types",
     "version": "1.0.0",
     "description": "Shared types and DTOs",
     "main": "dist/index.js",

@@ -2,6 +2,7 @@ import { type Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { AuthHeader } from '@/components/auth-header';
+import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 
 const geistSans = Geist({
@@ -16,10 +17,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
     title: {
-        default: 'Website Builder',
-        template: '%s | Website Builder',
+        default: 'Nest Next Template',
+        template: '%s | Nest Next Template',
     },
-    description: 'Build websites with AI',
+    description: 'NestJS + Next.js + Clerk + Prisma monorepo boilerplate',
 };
 
 export default function RootLayout({
@@ -28,12 +29,14 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-                <ClerkProvider appearance={{ cssLayerName: 'clerk' }}>
-                    <AuthHeader />
-                    {children}
-                </ClerkProvider>
+                <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+                    <ClerkProvider appearance={{ cssLayerName: 'clerk' }}>
+                        <AuthHeader />
+                        {children}
+                    </ClerkProvider>
+                </ThemeProvider>
             </body>
         </html>
     );

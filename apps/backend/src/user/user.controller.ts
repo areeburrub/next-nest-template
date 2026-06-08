@@ -15,7 +15,7 @@ import type {
     UpdateUserDto,
     UserResponseDto,
     DeleteUserResponseDto,
-} from '@website-builder/types';
+} from '@nest-next-template/types';
 
 @Controller('user')
 export class UserController {
