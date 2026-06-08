@@ -46,13 +46,22 @@ jobs:
             - name: Bump version if already published
               id: bump
               working-directory: packages/create
+              env:
+                  NPM_CONFIG_WORKSPACES: 'false'
               run: |
                   PACKAGE_NAME=$(node -p "require('./package.json').name")
                   LOCAL_VERSION=$(node -p "require('./package.json').version")
                   PUBLISHED_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "")
 
                   if [ "$LOCAL_VERSION" = "$PUBLISHED_VERSION" ]; then
-                    npm version patch --no-git-tag-version
+                    node -e "
+                      const fs = require('fs');
+                      const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+                      const parts = pkg.version.split('.').map(Number);
+                      parts[2] += 1;
+                      pkg.version = parts.join('.');
+                      fs.writeFileSync('package.json', JSON.stringify(pkg, null, 4) + '\n');
+                    "
                     NEW_VERSION=$(node -p "require('./package.json').version")
                     echo "bumped=true" >> "$GITHUB_OUTPUT"
                     echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
@@ -69,7 +78,9 @@ jobs:
 
             - name: Publish to npm
               working-directory: packages/create
-              run: npm publish --provenance --access public
+              env:
+                  NPM_CONFIG_WORKSPACES: 'false'
+              run: npm publish --provenance --access public --ignore-scripts
 
             - name: Commit version bump to main
               if: steps.bump.outputs.bumped == 'true'
