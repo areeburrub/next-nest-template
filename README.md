@@ -76,7 +76,7 @@ The CLI asks for a **project name** and **package manager**. It then:
 - Removes template-only files (`packages/create`, CI publish workflow)
 - Creates `.env` and `.env.local` files with the correct `DATABASE_URL`
 - Installs dependencies and initializes git
-- Starts PostgreSQL via Docker/Podman (if available) and runs migrations
+- Shows next steps to start PostgreSQL (`docker compose up -d`) and run migrations
 
 ### Option B — Clone directly
 

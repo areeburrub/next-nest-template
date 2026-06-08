@@ -8,18 +8,14 @@ import { downloadTemplate } from 'giget';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import {
-    buildDatabaseUrl,
     buildProjectNames,
     copyDirectory,
-    detectContainerRuntime,
     getRunCommand,
     isValidProjectName,
     pathExists,
     finalizeScaffoldedProject,
     removeTemplateOnlyPaths,
-    runMigrations,
     setupEnvFiles,
-    startDatabase,
     toKebabCase,
     transformProject,
     type PackageManager,
@@ -46,6 +42,15 @@ interface ProjectAnswers {
     targetDir: string;
     scope: string;
     packageManager: PackageManager;
+}
+
+interface SetupSummary {
+    projectPath: string;
+    scope: string;
+    title: string;
+    envFiles: boolean;
+    installed: boolean;
+    gitInit: boolean;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -189,24 +194,20 @@ async function downloadOrCopyTemplate(
 
     if (options.fromLocal) {
         const templateRoot = path.resolve(__dirname, '../../..');
-        p.log.step(`Copying template from ${templateRoot}`);
         await copyDirectory(templateRoot, absoluteTarget);
         return;
     }
 
-    p.log.step(`Downloading template from ${options.template}`);
-    const { dir } = await downloadTemplate(options.template, {
+    await downloadTemplate(options.template, {
         dir: absoluteTarget,
         force: true,
     });
-    p.log.success(`Template ready at ${dir}`);
 }
 
 async function runInstall(
     targetDir: string,
     packageManager: PackageManager,
 ): Promise<void> {
-    const absoluteTarget = path.resolve(targetDir);
     const installCmd =
         packageManager === 'bun'
             ? ['bun', 'install']
@@ -214,47 +215,63 @@ async function runInstall(
               ? ['pnpm', 'install']
               : ['npm', 'install'];
 
-    const spinner = p.spinner();
-    spinner.start(`Installing dependencies with ${packageManager}...`);
     await execa(installCmd[0], installCmd.slice(1), {
-        cwd: absoluteTarget,
+        cwd: path.resolve(targetDir),
         stdio: 'inherit',
     });
-    spinner.stop(`Dependencies installed with ${packageManager}`);
 }
 
 async function runGitInit(targetDir: string): Promise<void> {
-    const absoluteTarget = path.resolve(targetDir);
-    const spinner = p.spinner();
-    spinner.start('Initializing git repository...');
-    await execa('git', ['init'], { cwd: absoluteTarget, stdio: 'ignore' });
-    spinner.stop('Git repository initialized');
+    await execa('git', ['init'], {
+        cwd: path.resolve(targetDir),
+        stdio: 'ignore',
+    });
 }
 
-function printNextSteps(
-    targetDir: string,
-    names: ReturnType<typeof buildProjectNames>,
+function printSummary(
+    summary: SetupSummary,
     packageManager: PackageManager,
-    databaseReady: boolean,
 ): void {
+    const check = pc.green('✓');
     const run = getRunCommand(packageManager);
-    const steps = [
-        `cd ${targetDir}`,
-        'Add your Clerk keys to .env, apps/backend/.env, and apps/website/.env.local',
+
+    const completed = [
+        `${check} ${pc.bold(summary.title)} created at ${pc.cyan(summary.projectPath)}`,
+        `${check} ${pc.cyan(`${summary.scope}/backend`)} ${pc.dim('(NestJS)')}`,
+        `${check} ${pc.cyan(`${summary.scope}/website`)} ${pc.dim('(Next.js)')}`,
+        `${check} ${pc.cyan(`${summary.scope}/database`)} ${pc.dim('(Prisma)')}`,
+        `${check} shadcn/ui configured`,
+        `${check} Clerk auth configured`,
     ];
 
-    if (!databaseReady) {
-        steps.push(`Set DATABASE_URL in packages/database/.env`);
-        steps.push(`${run} db:migrate:deploy`);
+    if (summary.envFiles) {
+        completed.push(`${check} Environment files configured`);
     }
 
-    steps.push(`${run} dev`);
+    if (summary.installed) {
+        completed.push(`${check} Dependencies installed with ${pc.cyan(packageManager)}`);
+    }
 
-    p.note(steps.join('\n'), 'Next steps');
+    if (summary.gitInit) {
+        completed.push(`${check} Git repository initialized`);
+    }
 
-    p.outro(
-        `${pc.green('Success!')} Created ${pc.cyan(names.title)} at ${pc.cyan(path.resolve(targetDir))}`,
-    );
+    console.log('');
+    for (const line of completed) {
+        console.log(`  ${line}`);
+    }
+
+    const nextSteps = [
+        `cd ${summary.projectPath}`,
+        'docker compose up -d',
+        `${run} db:migrate:deploy`,
+        'Add your Clerk keys to .env, apps/backend/.env, and apps/website/.env.local',
+        `${run} dev`,
+    ];
+
+    p.note(nextSteps.join('\n'), 'Next steps');
+
+    p.outro(`${pc.green('You are all set!')} Happy building.`);
 }
 
 async function main(): Promise<void> {
@@ -265,86 +282,39 @@ async function main(): Promise<void> {
         const names = buildProjectNames(answers.projectName, answers.scope);
         const absoluteTarget = path.resolve(answers.targetDir);
 
-        p.log.step(`Creating ${names.title} in ./${answers.targetDir}`);
-        p.log.info(`Package scope: ${names.scope}`);
+        const spinner = p.spinner();
+        spinner.start('Creating your project...');
 
         await downloadOrCopyTemplate(answers.targetDir, options);
-
-        p.log.step('Removing template-only files...');
         await removeTemplateOnlyPaths(absoluteTarget);
-
-        p.log.step('Renaming packages and configuration...');
         await transformProject(absoluteTarget, names);
         await finalizeScaffoldedProject(absoluteTarget, names);
-
-        p.log.step('Creating environment files...');
         await setupEnvFiles(absoluteTarget, names);
-        p.log.success('Created .env, packages/database/.env, apps/backend/.env, apps/website/.env.local');
+
+        const summary: SetupSummary = {
+            projectPath: answers.targetDir,
+            scope: names.scope,
+            title: names.title,
+            envFiles: true,
+            installed: false,
+            gitInit: false,
+        };
 
         if (options.install) {
+            spinner.message('Installing dependencies...');
             await runInstall(answers.targetDir, answers.packageManager);
-        } else {
-            p.log.info('Skipped dependency installation (--no-install)');
+            summary.installed = true;
         }
 
         if (options.git) {
+            spinner.message('Initializing git...');
             await runGitInit(answers.targetDir);
-        } else {
-            p.log.info('Skipped git init (--no-git)');
+            summary.gitInit = true;
         }
 
-        let databaseReady = false;
-        const runtime = await detectContainerRuntime();
+        spinner.stop('Project ready');
 
-        const showDatabaseSetupHelp = (): void => {
-            p.log.info(`Set DATABASE_URL in packages/database/.env`);
-            p.log.info(`Default: ${buildDatabaseUrl(names)}`);
-            p.log.info(`Then run: ${getRunCommand(answers.packageManager)} db:migrate:deploy`);
-        };
-
-        if (runtime) {
-            const dockerSpinner = p.spinner();
-            dockerSpinner.start(`Starting PostgreSQL with ${runtime} compose...`);
-            try {
-                await startDatabase(absoluteTarget, runtime);
-                dockerSpinner.stop(`PostgreSQL is running (${runtime})`);
-
-                if (options.install) {
-                    const migrateSpinner = p.spinner();
-                    migrateSpinner.start('Running database migrations...');
-                    try {
-                        await runMigrations(absoluteTarget, answers.packageManager);
-                        migrateSpinner.stop('Database migrations applied');
-                        databaseReady = true;
-                    } catch (error) {
-                        migrateSpinner.stop('Database migrations failed');
-                        p.log.warn(
-                            error instanceof Error
-                                ? error.message
-                                : 'Could not apply database migrations',
-                        );
-                        showDatabaseSetupHelp();
-                    }
-                } else {
-                    p.log.info(
-                        `Skipped database migrations (--no-install). Run ${getRunCommand(answers.packageManager)} db:migrate:deploy after installing dependencies.`,
-                    );
-                }
-            } catch (error) {
-                dockerSpinner.stop(`${runtime} compose failed`);
-                p.log.warn(
-                    error instanceof Error
-                        ? error.message
-                        : 'Could not start database containers',
-                );
-                showDatabaseSetupHelp();
-            }
-        } else {
-            p.log.warn('No Docker or Podman detected.');
-            showDatabaseSetupHelp();
-        }
-
-        printNextSteps(answers.targetDir, names, answers.packageManager, databaseReady);
+        printSummary(summary, answers.packageManager);
     } catch (error) {
         p.cancel(error instanceof Error ? error.message : 'Failed to create project');
         process.exit(1);

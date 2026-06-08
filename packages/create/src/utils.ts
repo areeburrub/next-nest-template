@@ -1,4 +1,3 @@
-import { execa } from 'execa';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -34,7 +33,6 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 
 export type PackageManager = 'bun' | 'npm' | 'pnpm';
-export type ContainerRuntime = 'docker' | 'podman';
 
 export interface ProjectNames {
     kebab: string;
@@ -330,61 +328,6 @@ export async function finalizeScaffoldedProject(
     }
 }
 
-export async function detectContainerRuntime(): Promise<ContainerRuntime | null> {
-    for (const runtime of ['docker', 'podman'] as const) {
-        try {
-            await execa(runtime, ['compose', 'version'], { stdio: 'ignore' });
-            return runtime;
-        } catch {
-            continue;
-        }
-    }
-
-    return null;
-}
-
-export async function startDatabase(
-    targetDir: string,
-    runtime: ContainerRuntime,
-): Promise<void> {
-    try {
-        await execa(runtime, ['compose', 'up', '-d', '--wait'], {
-            cwd: targetDir,
-            stdio: 'inherit',
-        });
-        return;
-    } catch (error) {
-        const stderr =
-            error && typeof error === 'object' && 'stderr' in error
-                ? String((error as { stderr?: string }).stderr ?? '')
-                : '';
-        const message = error instanceof Error ? error.message : String(error);
-        const combined = `${message}\n${stderr}`;
-
-        if (!/unknown flag|unknown shorthand flag/i.test(combined)) {
-            throw error;
-        }
-    }
-
-    await execa(runtime, ['compose', 'up', '-d'], {
-        cwd: targetDir,
-        stdio: 'inherit',
-    });
-}
-
 export function getRunCommand(packageManager: PackageManager): string {
     return packageManager === 'npm' ? 'npm run' : `${packageManager} run`;
-}
-
-export async function runMigrations(
-    targetDir: string,
-    packageManager: PackageManager,
-): Promise<void> {
-    const runCmd = getRunCommand(packageManager);
-    const [cmd, ...args] = runCmd.split(' ');
-
-    await execa(cmd, [...args, 'db:migrate:deploy'], {
-        cwd: targetDir,
-        stdio: 'inherit',
-    });
 }

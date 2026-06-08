@@ -14,7 +14,7 @@ bunx create-next-nest-template my-app
 1. Asks for **project name** (directory and `@scope` are derived automatically)
 2. Asks for **package manager**
 3. Scaffolds the project, creates env files, installs deps, and initializes git
-4. Starts PostgreSQL with Docker/Podman if available, then runs migrations
+4. Shows next steps for Docker and database migrations
 
 ## Options
 
