@@ -82,12 +82,12 @@ export function buildProjectNames(name: string, scope?: string): ProjectNames {
 
 export function getReplacements(names: ProjectNames): Array<[string, string]> {
     return [
-        ['@nest-next-template', names.scope],
-        ['nest-next-template-postgres', `${names.kebab}-postgres`],
-        ['nest_next_template_postgres_data', `${names.snake}_postgres_data`],
-        ['nest-next-template', names.kebab],
-        ['nest_next_template', names.snake],
-        ['Nest Next Template', names.title],
+        ['@next-nest-template', names.scope],
+        ['next-nest-template-postgres', `${names.kebab}-postgres`],
+        ['next_nest_template_postgres_data', `${names.snake}_postgres_data`],
+        ['next-nest-template', names.kebab],
+        ['next_nest_template', names.snake],
+        ['Next Nest Template', names.title],
     ];
 }
 

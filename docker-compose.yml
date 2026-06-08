@@ -1,21 +1,21 @@
 services:
     postgres:
         image: postgres:16-alpine
-        container_name: nest-next-template-postgres
+        container_name: next-nest-template-postgres
         restart: unless-stopped
         ports:
             - "${POSTGRES_PORT:-5434}:5432"
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
-            POSTGRES_DB: nest_next_template
+            POSTGRES_DB: next_nest_template
         volumes:
-            - nest_next_template_postgres_data:/var/lib/postgresql/data
+            - next_nest_template_postgres_data:/var/lib/postgresql/data
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres -d nest_next_template"]
+            test: ["CMD-SHELL", "pg_isready -U postgres -d next_nest_template"]
             interval: 5s
             timeout: 5s
             retries: 5
 
 volumes:
-    nest_next_template_postgres_data:
+    next_nest_template_postgres_data:

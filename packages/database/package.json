@@ -1,5 +1,5 @@
 {
-    "name": "@nest-next-template/database",
+    "name": "@next-nest-template/database",
     "version": "1.0.0",
     "description": "Database package with Prisma ORM",
     "main": "dist/src/index.js",

@@ -5,7 +5,7 @@ import type {
     UpdateUserDto,
     UserResponseDto,
     DeleteUserResponseDto,
-} from '@nest-next-template/types';
+} from '@next-nest-template/types';
 
 export async function getCurrentUser() {
     return createServerAction<UserResponseDto>(async (api) => {

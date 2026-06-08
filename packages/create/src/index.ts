@@ -21,7 +21,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_TEMPLATE =
-    process.env.NEST_NEXT_TEMPLATE_REPO ?? 'github:YOUR_USERNAME/nest-next-template';
+    process.env.NEXT_NEST_TEMPLATE_REPO ?? 'github:YOUR_USERNAME/next-nest-template';
 
 interface CliOptions {
     projectName?: string;
@@ -78,11 +78,11 @@ function parseArgs(argv: string[]): CliOptions {
 
 function printHelp(): void {
     console.log(`
-${pc.bold('create-nest-next-template')} — Scaffold a NestJS + Next.js + Clerk + Prisma monorepo
+${pc.bold('create-next-nest-template')} — Scaffold a NestJS + Next.js + Clerk + Prisma monorepo
 
 ${pc.bold('Usage')}
-  npx create-nest-next-template [project-name] [directory]
-  bunx create-nest-next-template [project-name] [directory]
+  npx create-next-nest-template [project-name] [directory]
+  bunx create-next-nest-template [project-name] [directory]
 
 ${pc.bold('Options')}
   --from-local          Use the local monorepo as template (for development)
@@ -94,8 +94,8 @@ ${pc.bold('Options')}
   -h, --help            Show this help
 
 ${pc.bold('Examples')}
-  npx create-nest-next-template my-saas
-  bunx create-nest-next-template my-saas ./my-saas --scope @myorg
+  npx create-next-nest-template my-saas
+  bunx create-next-nest-template my-saas ./my-saas --scope @myorg
   node packages/create/dist/index.js demo --from-local
 `);
 }
@@ -131,7 +131,7 @@ async function promptForMissing(options: CliOptions): Promise<{
         };
     }
 
-    p.intro(pc.bgCyan(pc.black(' create-nest-next-template ')));
+    p.intro(pc.bgCyan(pc.black(' create-next-nest-template ')));
 
     let projectName = options.projectName;
     if (!projectName) {

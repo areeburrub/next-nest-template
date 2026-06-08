@@ -1,6 +1,6 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import { prisma } from '@nest-next-template/database';
-import { CreateUserDto, UpdateUserDto } from '@nest-next-template/types';
+import { prisma } from '@next-nest-template/database';
+import { CreateUserDto, UpdateUserDto } from '@next-nest-template/types';
 import { createClerkClient } from '@clerk/backend';
 
 @Injectable()

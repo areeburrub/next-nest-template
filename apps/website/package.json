@@ -1,5 +1,5 @@
 {
-    "name": "@nest-next-template/website",
+    "name": "@next-nest-template/website",
     "version": "0.1.0",
     "private": true,
     "scripts": {
@@ -11,7 +11,7 @@
     "dependencies": {
         "@clerk/nextjs": "^6.36.8",
         "@radix-ui/react-slot": "^1.2.3",
-        "@nest-next-template/types": "workspace:*",
+        "@next-nest-template/types": "workspace:*",
         "axios": "^1.12.2",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",

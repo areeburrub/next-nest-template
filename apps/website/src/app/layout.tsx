@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
     title: {
-        default: 'Nest Next Template',
-        template: '%s | Nest Next Template',
+        default: 'Next Nest Template',
+        template: '%s | Next Nest Template',
     },
     description: 'NestJS + Next.js + Clerk + Prisma monorepo boilerplate',
 };

@@ -1,4 +1,4 @@
-# nest-next-template
+# next-nest-template
 
 A clone-and-go monorepo boilerplate for full-stack TypeScript apps:
 
@@ -11,23 +11,23 @@ Use this repo as a starting point for any product. Fork it, rename packages, and
 Scaffold a fresh monorepo with the interactive CLI:
 
 ```bash
-npx create-nest-next-template
+npx create-next-nest-template
 # or
-bunx create-nest-next-template
+bunx create-next-nest-template
 ```
 
 With a project name:
 
 ```bash
-npx create-nest-next-template my-saas-app
-bunx create-nest-next-template my-saas-app --scope @myorg
+npx create-next-nest-template my-saas-app
+bunx create-next-nest-template my-saas-app --scope @myorg
 ```
 
 The CLI will:
 
 1. Ask for project name, directory, and npm scope (`@my-app`)
 2. Download this template from GitHub (or copy locally with `--from-local`)
-3. Replace all `nest-next-template` / `@nest-next-template` references with your project name
+3. Replace all `next-nest-template` / `@next-nest-template` references with your project name
 4. Copy `.env.example` files to `.env`
 5. Optionally install dependencies and run `git init`
 
@@ -36,16 +36,16 @@ The CLI will:
 | Flag | Description |
 |------|-------------|
 | `--from-local` | Use the local repo as template (for CLI development) |
-| `--template <source>` | Giget source (default: `github:YOUR_USERNAME/nest-next-template`) |
+| `--template <source>` | Giget source (default: `github:YOUR_USERNAME/next-nest-template`) |
 | `--scope @myorg` | npm scope for workspace packages |
 | `--pm bun\|npm\|pnpm` | Package manager |
 | `--no-install` | Skip dependency installation |
 | `--no-git` | Skip `git init` |
 
-**Publish the CLI** (maintainers): update `repository.url` and `NEST_NEXT_TEMPLATE_REPO` in `packages/create`, then:
+**Publish the CLI** (maintainers): update `repository.url` and `NEXT_NEST_TEMPLATE_REPO` in `packages/create`, then:
 
 ```bash
-cd packages/create && bun run build && npm publish --access public
+cd packages/create && bun run build && npm publish
 ```
 
 **Local development**
@@ -68,7 +68,7 @@ bun run create -- my-test-app --from-local --no-install
 ## Project structure
 
 ```
-nest-next-template/
+next-nest-template/
 ├── apps/
 │   ├── backend/                 # NestJS API (default port 3001)
 │   │   └── src/
@@ -85,7 +85,7 @@ nest-next-template/
 │           ├── _actions/          # Server actions → backend API
 │           └── components/        # UI + shadcn components
 ├── packages/
-│   ├── create/                  # create-nest-next-template CLI (publishable)
+│   ├── create/                  # create-next-nest-template CLI (publishable)
 │   ├── database/                # Prisma schema, migrations, client export
 │   └── types/                   # Shared DTOs and response types
 ├── docker-compose.yml           # Local PostgreSQL
@@ -107,14 +107,14 @@ nest-next-template/
 **Option A — CLI (recommended)**
 
 ```bash
-npx create-nest-next-template my-app
+npx create-next-nest-template my-app
 cd my-app
 ```
 
 **Option B — Clone manually**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/nest-next-template.git my-app
+git clone https://github.com/YOUR_USERNAME/next-nest-template.git my-app
 cd my-app
 ```
 
@@ -153,7 +153,7 @@ docker compose up -d
 Default connection:
 
 ```
-postgresql://postgres:postgres@localhost:5434/nest_next_template
+postgresql://postgres:postgres@localhost:5434/next_nest_template
 ```
 
 Change the host port via `POSTGRES_PORT` in `.env` if 5434 is taken.
@@ -228,7 +228,7 @@ cd apps/website && bun run dev
 
 ### Rename packages
 
-Search and replace `@nest-next-template` with your scope (e.g. `@my-app`) in:
+Search and replace `@next-nest-template` with your scope (e.g. `@my-app`) in:
 
 - `package.json` files (root + all workspaces)
 - Import paths in `apps/backend` and `apps/website`

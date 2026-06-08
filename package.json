@@ -1,6 +1,16 @@
 {
-    "name": "nest-next-template",
+    "name": "next-nest-template",
+    "description": "Next.js + NestJS + Clerk + Prisma Turborepo monorepo boilerplate",
+    "license": "MIT",
     "private": true,
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/YOUR_USERNAME/next-nest-template.git"
+    },
+    "bugs": {
+        "url": "https://github.com/YOUR_USERNAME/next-nest-template/issues"
+    },
+    "homepage": "https://github.com/YOUR_USERNAME/next-nest-template#readme",
     "workspaces": [
         "apps/*",
         "packages/*"
@@ -11,8 +21,8 @@
         "lint": "turbo run lint",
         "format": "prettier --write \"**/*.{ts,tsx,md}\"",
         "check-types": "turbo run check-types",
-        "build:backend": "turbo run build --filter=@nest-next-template/backend",
-        "start:backend": "turbo run start --filter=@nest-next-template/database --filter=@nest-next-template/backend",
+        "build:backend": "turbo run build --filter=@next-nest-template/backend",
+        "start:backend": "turbo run start --filter=@next-nest-template/database --filter=@next-nest-template/backend",
         "db:migrate": "cd packages/database && bun run db:migrate",
         "db:migrate:deploy": "cd packages/database && bun run db:migrate:deploy",
         "db:studio": "cd packages/database && bun run dev",

@@ -1,5 +1,5 @@
 {
-    "name": "@nest-next-template/backend",
+    "name": "@next-nest-template/backend",
     "version": "0.0.1",
     "description": "",
     "author": "",
@@ -23,8 +23,8 @@
         "@nestjs/config": "^4.0.2",
         "@nestjs/core": "^11.0.1",
         "@nestjs/platform-express": "^11.0.1",
-        "@nest-next-template/database": "workspace:*",
-        "@nest-next-template/types": "workspace:*",
+        "@next-nest-template/database": "workspace:*",
+        "@next-nest-template/types": "workspace:*",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.14.1",
         "reflect-metadata": "^0.2.2",
