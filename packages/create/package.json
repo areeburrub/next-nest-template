@@ -28,18 +28,19 @@
         "monorepo",
         "fullstack"
     ],
-    "author": "YOUR_USERNAME",
+    "author": "areeburrub",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/YOUR_USERNAME/next-nest-template.git",
+        "url": "git+https://github.com/areeburrub/next-nest-template.git",
         "directory": "packages/create"
     },
     "bugs": {
-        "url": "https://github.com/YOUR_USERNAME/next-nest-template/issues"
+        "url": "https://github.com/areeburrub/next-nest-template/issues"
     },
-    "homepage": "https://github.com/YOUR_USERNAME/next-nest-template/tree/main/packages/create#readme",
+    "homepage": "https://github.com/areeburrub/next-nest-template/tree/main/packages/create#readme",
     "publishConfig": {
-        "access": "public"
+        "access": "public",
+        "provenance": true
     },
     "dependencies": {
         "@clack/prompts": "^0.10.1",

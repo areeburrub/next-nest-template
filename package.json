@@ -5,12 +5,12 @@
     "private": true,
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/YOUR_USERNAME/next-nest-template.git"
+        "url": "git+https://github.com/areeburrub/next-nest-template.git"
     },
     "bugs": {
-        "url": "https://github.com/YOUR_USERNAME/next-nest-template/issues"
+        "url": "https://github.com/areeburrub/next-nest-template/issues"
     },
-    "homepage": "https://github.com/YOUR_USERNAME/next-nest-template#readme",
+    "homepage": "https://github.com/areeburrub/next-nest-template#readme",
     "workspaces": [
         "apps/*",
         "packages/*"

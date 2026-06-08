@@ -21,7 +21,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_TEMPLATE =
-    process.env.NEXT_NEST_TEMPLATE_REPO ?? 'github:YOUR_USERNAME/next-nest-template';
+    process.env.NEXT_NEST_TEMPLATE_REPO ?? 'github:areeburrub/next-nest-template';
 
 interface CliOptions {
     projectName?: string;
